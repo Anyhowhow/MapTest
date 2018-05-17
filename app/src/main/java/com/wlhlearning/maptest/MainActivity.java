@@ -20,6 +20,12 @@ import com.baidu.mapapi.map.MapStatusUpdateFactory;
 import com.baidu.mapapi.map.MapView;
 import com.baidu.mapapi.map.MyLocationData;
 import com.baidu.mapapi.model.LatLng;
+import com.baidu.mapapi.search.core.SearchResult;
+import com.baidu.mapapi.search.geocode.GeoCodeResult;
+import com.baidu.mapapi.search.geocode.GeoCoder;
+import com.baidu.mapapi.search.geocode.OnGetGeoCoderResultListener;
+import com.baidu.mapapi.search.geocode.ReverseGeoCodeOption;
+import com.baidu.mapapi.search.geocode.ReverseGeoCodeResult;
 
 import java.util.ArrayList;
 import java.util.List;
@@ -30,6 +36,7 @@ public class MainActivity extends AppCompatActivity {
     private MapView mapView;
     private BaiduMap baiduMap;
     private boolean isfirstLocate = true;
+    private GeoCoder mSearch;
     @Override
     protected void onCreate(Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
@@ -67,6 +74,8 @@ public class MainActivity extends AppCompatActivity {
         option.setScanSpan(5000);
         option.setIsNeedAddress(true);
         mLocationClient.setLocOption(option);
+        mSearch=GeoCoder.newInstance();
+        mSearch.setOnGetGeoCodeResultListener(new MyAddressListener());
     }
     @Override
     protected void onResume(){
@@ -84,6 +93,7 @@ public class MainActivity extends AppCompatActivity {
         mLocationClient.stop();
         mapView.onDestroy();
         baiduMap.setMyLocationEnabled(false);
+        mSearch.destroy();
     }
     @Override
     public void onRequestPermissionsResult(int requestCode,String[] permissions,int[] grantResults){
@@ -124,24 +134,47 @@ public class MainActivity extends AppCompatActivity {
     public class MyLocationListener implements BDLocationListener{
         @Override
         public void onReceiveLocation(BDLocation location){
-            StringBuilder currentPosition = new StringBuilder();
-            currentPosition.append("纬度:").append(location.getLatitude()).append("\n");
-            currentPosition.append("经度:").append(location.getLongitude()).append("\n");
-            currentPosition.append("国家:").append(location.getCountry()).append("\n");
-            currentPosition.append("省:").append(location.getProvince()).append("\n");
-            currentPosition.append("市:").append(location.getCity()).append("\n");
-            currentPosition.append("区:").append(location.getDistrict()).append("\n");
-            currentPosition.append("街道:").append(location.getStreet()).append("\n");
-            currentPosition.append("定位方式:");
-            if (location.getLocType()==BDLocation.TypeGpsLocation){
-                currentPosition.append("GPS");
-            }else if(location.getLocType()==BDLocation.TypeNetWorkLocation){
-                currentPosition.append("网络");
-            }
-            position_text.setText(currentPosition);
+//            currentPosition.append("纬度:").append(location.getLatitude()).append("\n");
+//            currentPosition.append("经度:").append(location.getLongitude()).append("\n");
+//            currentPosition.append("国家:").append(location.getCountry()).append("\n");
+//            currentPosition.append("省:").append(location.getProvince()).append("\n");
+//            currentPosition.append("市:").append(location.getCity()).append("\n");
+//            currentPosition.append("区:").append(location.getDistrict()).append("\n");
+//            currentPosition.append("街道:").append(location.getStreet()).append("\n");
+//            currentPosition.append("定位方式:");
+//            if (location.getLocType()==BDLocation.TypeGpsLocation){
+//                currentPosition.append("GPS");
+//            }else if(location.getLocType()==BDLocation.TypeNetWorkLocation){
+//                currentPosition.append("网络");
+//            }
+            //根据经纬度进行反地理编码
+            LatLng myLocation = new LatLng(location.getLatitude(),location.getLongitude());
+            mSearch.reverseGeoCode(new ReverseGeoCodeOption().location(myLocation));
             if (location.getLocType()==BDLocation.TypeGpsLocation || location.getLocType()==BDLocation.TypeNetWorkLocation){
                 navigateTo(location);
             }
         }
     }
+    public class MyAddressListener implements OnGetGeoCoderResultListener{
+        public void onGetGeoCodeResult(GeoCodeResult result) {
+            if (result == null || result.error != SearchResult.ERRORNO.NO_ERROR) {
+                //没有检索到结果
+            }
+        }
+        @Override
+        public void onGetReverseGeoCodeResult(ReverseGeoCodeResult result) {
+
+            if (result == null || result.error != SearchResult.ERRORNO.NO_ERROR) {
+                Toast.makeText(MainActivity.this,"反地理编码失败",Toast.LENGTH_SHORT).show();
+            }
+            if (result!=null){
+                StringBuilder currentPosition = new StringBuilder();
+                currentPosition.append(result.getAddress());
+                position_text.setText(currentPosition);
+            }
+
+
+        }
+    }
+
 }
